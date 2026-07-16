@@ -41,6 +41,7 @@
 package sqlcipher
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/pbkdf2"
 	"crypto/sha512"
@@ -169,15 +170,14 @@ func NewCodec(k Key, salt []byte, p Params) (*Codec, error) {
 		return nil, fmt.Errorf("sqlcipher: derive page-authentication key: %w", err)
 	}
 
-	c := &Codec{pageSize: p.pageSize(), salt: bytes(salt), key: bytes(key), mac: mac}
-	return c, nil
+	return &Codec{pageSize: p.pageSize(), salt: bytes.Clone(salt), key: bytes.Clone(key), mac: mac}, nil
 }
 
 // PageSize is the on-disk size of every page, including the reserve trailer.
 func (c *Codec) PageSize() int { return c.pageSize }
 
 // Salt returns the database salt.
-func (c *Codec) Salt() []byte { return bytes(c.salt) }
+func (c *Codec) Salt() []byte { return bytes.Clone(c.salt) }
 
 // FileSalt reads the salt from page 1 of an encrypted database. page1 need only
 // be the first SaltSize bytes of the file.
@@ -185,7 +185,7 @@ func FileSalt(page1 []byte) ([]byte, error) {
 	if len(page1) < SaltSize {
 		return nil, fmt.Errorf("sqlcipher: need %d bytes to read the salt, got %d", SaltSize, len(page1))
 	}
-	return bytes(page1[:SaltSize]), nil
+	return bytes.Clone(page1[:SaltSize]), nil
 }
 
 // offset is the number of leading bytes page pgno does not encrypt: page 1 keeps
@@ -207,5 +207,3 @@ func (c *Codec) pageMAC(pgno uint32, data []byte) []byte {
 	m.Write([]byte{byte(pgno), byte(pgno >> 8), byte(pgno >> 16), byte(pgno >> 24)})
 	return m.Sum(nil)
 }
-
-func bytes(b []byte) []byte { return append([]byte(nil), b...) }

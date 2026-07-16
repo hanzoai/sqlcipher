@@ -1,4 +1,5 @@
 *.db
+!testdata/*.db
 *.db-wal
 *.db-shm
 *.log
