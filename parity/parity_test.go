@@ -175,6 +175,66 @@ func TestParity(t *testing.T) {
 	}
 }
 
+// TestParityNewDatabaseFromSeed is the byte-compatibility gate for a database
+// CREATED from nothing in pure Go: EmptyPlaintext mints the reserve-80 seed,
+// modernc writes a table into it (honouring the reserve from the header), this
+// port encrypts it, and the C SQLCipher library reads back what Go wrote. This is
+// the new-database path a pure-Go encrypting driver takes when no file exists yet.
+func TestParityNewDatabaseFromSeed(t *testing.T) {
+	run := cref(t)
+	dir := t.TempDir()
+	plain := filepath.Join(dir, "seed.db")
+	godb := filepath.Join(dir, "seeded-go.db")
+
+	// 1) Mint the pure-Go seed and write a schema + row through modernc.
+	seed, err := sqlcipher.EmptyPlaintext(sqlcipher.Params{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(plain, seed, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", "file:"+plain+"?_pragma=journal_mode(DELETE)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("CREATE TABLE t(id INTEGER PRIMARY KEY, v TEXT)"); err != nil {
+		db.Close()
+		t.Fatalf("modernc could not create a table in the seed: %v", err)
+	}
+	if _, err := db.Exec("INSERT INTO t(v) VALUES('seed-then-encrypt')"); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	db.Close()
+
+	// The reserve must survive modernc's writes, or EncryptFile has no room.
+	pt, err := os.ReadFile(plain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pt[20] != sqlcipher.Reserve {
+		t.Fatalf("modernc dropped the reserve: header byte 20 = %d, want %d", pt[20], sqlcipher.Reserve)
+	}
+
+	// 2) Encrypt with a fresh salt (nil) — a brand-new database.
+	convert(t, godb, plain, true, nil)
+	if b, err := os.ReadFile(godb); err != nil {
+		t.Fatal(err)
+	} else if strings.HasPrefix(string(b), "SQLite format 3") {
+		t.Fatal("pure Go wrote a plaintext header for a new database")
+	}
+
+	// 3) The C library reads the pure-Go-seeded, pure-Go-encrypted database.
+	out, err := run("read", godb, keyHex)
+	if err != nil {
+		t.Fatalf("the C SQLCipher library could not read a pure-Go seed-then-encrypt database: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "seed-then-encrypt") {
+		t.Errorf("the C library did not read back the seeded row\n%s", out)
+	}
+}
+
 // TestWrongKeyFailsClosed: the C library refuses a database under the wrong key,
 // and so must this port.
 func TestWrongKeyFailsClosed(t *testing.T) {
