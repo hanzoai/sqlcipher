@@ -1,6 +1,6 @@
 module github.com/hanzoai/sqlcipher/reader
 
-go 1.26.4
+go 1.26.5
 
 require (
 	github.com/hanzoai/sqlcipher v0.1.0
