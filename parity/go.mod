@@ -1,6 +1,6 @@
 module github.com/hanzoai/sqlcipher/parity
 
-go 1.26.5
+go 1.26.8
 
 require (
 	github.com/hanzoai/sqlcipher v0.1.0
