@@ -1,5 +1,7 @@
 # Hanzo SQLCipher
 
+[![Open in Hanzo](https://hanzo.app/badges/open-in-hanzo.svg)](https://hanzo.app/dev/open?repo=github.com/hanzoai/sqlcipher&ref=main&action=open) [![Edit with Hanzo](https://hanzo.app/badges/edit-with-hanzo.svg)](https://hanzo.app/dev/open?repo=github.com/hanzoai/sqlcipher&ref=main&action=edit) [![Deploy with Hanzo](https://hanzo.app/badges/deploy-with-hanzo.svg)](https://hanzo.app/dev/open?repo=github.com/hanzoai/sqlcipher&ref=main&action=deploy)
+
 The **SQLCipher 4 on-disk page format**, in pure Go, with **zero dependencies**.
 
 A port of the SQLCipher codec ([sqlcipher/sqlcipher](https://github.com/sqlcipher/sqlcipher)
